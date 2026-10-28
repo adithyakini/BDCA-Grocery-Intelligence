@@ -61,3 +61,36 @@ class PriceObservation(Base):
     observed_price = __import__('sqlalchemy').Column(Float, nullable=False)
     effective_price = __import__('sqlalchemy').Column(Float, nullable=True)
     observed_at = __import__('sqlalchemy').Column(DateTime, default=utcnow, nullable=False, index=True)
+
+
+class DiscoverySource(Base):
+    __tablename__ = 'discovery_sources'
+    id = __import__('sqlalchemy').Column(Integer, primary_key=True, index=True)
+    name = __import__('sqlalchemy').Column(String(160), nullable=False)
+    feed_url = __import__('sqlalchemy').Column(Text, unique=True, nullable=False)
+    source_type = __import__('sqlalchemy').Column(String(40), default='rss', nullable=False)
+    enabled = __import__('sqlalchemy').Column(Boolean, default=True, nullable=False)
+    last_scanned_at = __import__('sqlalchemy').Column(DateTime, nullable=True)
+    last_result = __import__('sqlalchemy').Column(String(240), nullable=True)
+    created_at = __import__('sqlalchemy').Column(DateTime, default=utcnow, nullable=False)
+
+class WatchlistItem(Base):
+    __tablename__ = 'watchlist_items'
+    id = __import__('sqlalchemy').Column(Integer, primary_key=True, index=True)
+    query = __import__('sqlalchemy').Column(String(240), unique=True, nullable=False)
+    category = __import__('sqlalchemy').Column(String(100), nullable=True)
+    target_price = __import__('sqlalchemy').Column(Float, nullable=True)
+    enabled = __import__('sqlalchemy').Column(Boolean, default=True, nullable=False)
+    created_at = __import__('sqlalchemy').Column(DateTime, default=utcnow, nullable=False)
+
+class DiscoveryRun(Base):
+    __tablename__ = 'discovery_runs'
+    id = __import__('sqlalchemy').Column(Integer, primary_key=True, index=True)
+    started_at = __import__('sqlalchemy').Column(DateTime, default=utcnow, nullable=False)
+    finished_at = __import__('sqlalchemy').Column(DateTime, nullable=True)
+    status = __import__('sqlalchemy').Column(String(30), default='RUNNING', nullable=False)
+    sources_checked = __import__('sqlalchemy').Column(Integer, default=0, nullable=False)
+    entries_examined = __import__('sqlalchemy').Column(Integer, default=0, nullable=False)
+    candidates_found = __import__('sqlalchemy').Column(Integer, default=0, nullable=False)
+    offers_created = __import__('sqlalchemy').Column(Integer, default=0, nullable=False)
+    message = __import__('sqlalchemy').Column(Text, nullable=True)

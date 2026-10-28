@@ -38,3 +38,13 @@ class OfferOut(BaseModel):
     expires_at: Optional[datetime]
     status: str
     reviewed_at: Optional[datetime]
+
+
+class DiscoverySourceCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    feed_url: str = Field(min_length=8, max_length=2000)
+
+class WatchlistCreate(BaseModel):
+    query: str = Field(min_length=2, max_length=240)
+    category: Optional[str] = Field(default=None, max_length=100)
+    target_price: Optional[float] = Field(default=None, gt=0)

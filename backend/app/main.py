@@ -1,11 +1,25 @@
 import os
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine, SessionLocal
 from . import models
 from .routers.deals import router, upsert_offer
+from .routers.discovery import router as discovery_router
 from .schemas import OfferCreate
+from .services.discovery import discover_from_sources
+
+def scheduled_discovery():
+    db = SessionLocal()
+    try:
+        discover_from_sources(db)
+    except Exception as exc:
+        print(f'[discovery] Scheduled run failed: {exc}')
+    finally:
+        db.close()
+
+scheduler = BackgroundScheduler(daemon=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,12 +40,22 @@ async def lifespan(app: FastAPI):
             db.commit()
     finally:
         db.close()
-    yield
+    scheduler_enabled = os.getenv('DISCOVERY_SCHEDULER_ENABLED', 'true').lower() in ('1', 'true', 'yes')
+    interval_hours = max(1, int(os.getenv('DISCOVERY_INTERVAL_HOURS', '6')))
+    if scheduler_enabled:
+        scheduler.add_job(scheduled_discovery, 'interval', hours=interval_hours, id='grocery-discovery', replace_existing=True, max_instances=1)
+        scheduler.start()
+    try:
+        yield
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
 
 app = FastAPI(title='BDCA Grocery Intelligence API', version='0.1.0', lifespan=lifespan, description='Personal grocery deal review queue and price suppression API.')
 origins = [x.strip() for x in os.getenv('FRONTEND_URL', 'http://localhost:5173').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 app.include_router(router)
+app.include_router(discovery_router)
 
 @app.get('/api/health')
 def health():
